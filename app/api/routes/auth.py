@@ -137,3 +137,42 @@ async def get_my_permissions(
     """Retorna todas as permissões do usuário autenticado."""
     permissions = await AuthService.get_user_permissions(current_user)
     return {"permissions": permissions}
+
+
+@router.post("/password-reset", summary="Solicitar reset de senha")
+async def request_password_reset(
+    data: PasswordReset,
+    session: AsyncSession = Depends(get_session)
+):
+    """Solicita um reset de senha para o email informado.
+
+    Envia um email com link de reset se o usuário existir.
+    Por segurança, sempre retorna sucesso mesmo se o email não existir.
+    """
+    await AuthService.request_password_reset(data.email, session)
+
+    return {"message": "Se o email existir, você receberá instruções para reset por email"}
+
+
+@router.post("/password-reset/confirm", summary="Confirmar reset de senha")
+async def confirm_password_reset(
+    data: PasswordResetConfirm,
+    session: AsyncSession = Depends(get_session)
+):
+    """Confirma o reset de senha usando o token recebido.
+
+    O token tem validade de 1 hora e só pode ser usado uma vez.
+    """
+    success = await AuthService.confirm_password_reset(
+        data.token,
+        data.new_password,
+        session
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token de reset inválido ou expirado"
+        )
+
+    return {"message": "Senha alterada com sucesso"}

@@ -18,3 +18,5 @@ celery==5.4.0
 redis==5.0.8
 tenacity==9.0.0
 python-multipart==0.0.9
+aiosmtplib==3.0.2
+jinja2==3.1.4

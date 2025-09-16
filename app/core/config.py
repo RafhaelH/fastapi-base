@@ -1,5 +1,4 @@
 """Configurações da aplicação."""
-import os
 from typing import List, Optional
 
 from pydantic import validator, Field
@@ -12,35 +11,41 @@ class Settings(BaseSettings):
     # Aplicação
     PROJECT_NAME: str = "FastAPI Base"
     API_V1_PREFIX: str = "/api/v1"
-    DEBUG: bool = True
-    ENV: str = "development"
+    DEBUG: bool = False
+    ENV: str = "production"
     LOG_LEVEL: str = "INFO"
-    
+
     # Segurança
-    SECRET_KEY: str = "change-me-in-production"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    SECRET_KEY: str
+    JWT_SECRET_KEY: Optional[str] = None
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     JWT_ALGORITHM: str = "HS256"
     
     # Banco de Dados
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/fastapi_base"
-    SYNC_DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/fastapi_base"
+    DATABASE_URL: str
+    SYNC_DATABASE_URL: str
     
     # CORS
     CORS_ORIGINS: str = Field(default="", json_schema_extra={"format": "text"})
     
     # Redis
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = "redis://localhost:6379"
     
     # Celery
     CELERY_BROKER_URL: Optional[str] = None
     CELERY_RESULT_BACKEND: Optional[str] = None
     
-    # Email (para funcionalidades futuras)
-    SMTP_SERVER: Optional[str] = None
+    # Email - SMTP
+    SMTP_SERVER: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
     SMTP_USERNAME: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
     EMAIL_FROM: Optional[str] = None
+    EMAIL_FROM_NAME: str = "FastAPI Base"
+
+    # URLs para frontend
+    FRONTEND_URL: str = "http://localhost:3000"
     
     # Upload de arquivos
     MAX_FILE_SIZE: int = 10485760  # 10MB
@@ -73,6 +78,13 @@ class Settings(BaseSettings):
         if v:
             return v
         return values.get("REDIS_URL", "redis://localhost:6379/0")
+
+    @validator("JWT_SECRET_KEY", pre=True, always=True)
+    def set_jwt_secret_key(cls, v: Optional[str], values: dict) -> str:
+        """Define JWT_SECRET_KEY baseado no SECRET_KEY se não fornecido."""
+        if v:
+            return v
+        return values.get("SECRET_KEY", "")
     
     model_config = SettingsConfigDict(
         env_file=".env",

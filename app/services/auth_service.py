@@ -1,5 +1,5 @@
 """Serviços para autenticação e gerenciamento de usuários."""
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,13 +8,15 @@ from sqlalchemy.orm import selectinload
 
 from app.models.user import User, Role
 from app.core.security import (
-    verify_password, 
-    create_access_token, 
+    verify_password,
+    create_access_token,
     create_refresh_token,
     get_password_hash,
-    verify_token
+    verify_token,
+    generate_password_reset_token
 )
 from app.schemas.auth import Token
+from app.services.email_service import email_service
 
 
 class AuthService:
@@ -169,7 +171,7 @@ class AuthService:
             
             return Token(
                 access_token=access_token,
-                refresh_token=refresh_token,  # Mantém o mesmo refresh token
+                refresh_token=refresh_token,
                 expires_in=3600
             )
             
@@ -223,3 +225,93 @@ class AuthService:
                         permissions.append(f"{permission.resource}:{permission.action}")
         
         return list(set(permissions))
+
+    @staticmethod
+    async def request_password_reset(email: str, session: AsyncSession) -> bool:
+        """Solicita um reset de senha para o email informado.
+
+        Args:
+            email: Email do usuário
+            session: Sessão do banco de dados
+
+        Returns:
+            True sempre (por segurança), independente se o usuário existe
+        """
+        user = (await session.execute(
+            select(User).where(User.email == email, User.is_active == True)
+        )).scalar_one_or_none()
+
+        if not user:
+            # Por segurança, sempre retorna True mesmo se o usuário não existir
+            return True
+
+        # Gera token de reset
+        reset_token = generate_password_reset_token()
+
+        # Define expiração para 1 hora
+        expires_at = datetime.utcnow() + timedelta(hours=1)
+
+        # Salva no banco
+        user.password_reset_token = reset_token
+        user.password_reset_expires = expires_at
+
+        await session.commit()
+
+        # Envia o email de forma segura
+        try:
+            email_sent = await email_service.send_password_reset_email(
+                to_email=email,
+                reset_token=reset_token,
+                user_name=user.first_name
+            )
+
+            if not email_sent:
+                # Log do erro, mas ainda retorna True por segurança
+                print(f"Erro ao enviar email de reset para {email}")
+
+        except Exception as e:
+            # Log do erro mas não propaga exceção para evitar crash
+            print(f"Exceção ao tentar enviar email de reset para {email}: {str(e)}")
+
+        return True
+
+    @staticmethod
+    async def confirm_password_reset(
+        token: str,
+        new_password: str,
+        session: AsyncSession
+    ) -> bool:
+        """Confirma o reset de senha usando o token.
+
+        Args:
+            token: Token de reset
+            new_password: Nova senha
+            session: Sessão do banco de dados
+
+        Returns:
+            True se o reset foi realizado com sucesso, False caso contrário
+        """
+        user = (await session.execute(
+            select(User).where(
+                User.password_reset_token == token,
+                User.is_active == True
+            )
+        )).scalar_one_or_none()
+
+        if not user or not user.password_reset_expires:
+            return False
+
+        # Verifica se o token não expirou
+        if user.password_reset_expires < datetime.utcnow():
+            return False
+
+        # Atualiza a senha
+        user.password_hash = get_password_hash(new_password)
+
+        # Remove o token de reset
+        user.password_reset_token = None
+        user.password_reset_expires = None
+
+        await session.commit()
+
+        return True

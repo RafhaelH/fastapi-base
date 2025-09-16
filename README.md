@@ -11,6 +11,8 @@ Uma base completa e profissional para projetos FastAPI com sistema de autentica�
 - Middleware de autenticação robusto
 - Validação de senhas com critérios de segurança
 - Endpoints para alteração de senha e gerenciamento de sessões
+- **Reset de senha via email** com tokens seguros
+- **Integração Gmail SMTP** para envio de emails
 
 ### Gerenciamento de Usuários
 - CRUD completo de usuários com paginação e filtros
@@ -26,6 +28,14 @@ Uma base completa e profissional para projetos FastAPI com sistema de autentica�
 - Atribuição dinâmica de permissões a roles
 - Role padrão para novos usuários
 - Sistema de superusuário com acesso total
+
+### Sistema de Emails
+- **Gmail SMTP** integrado para envio de emails
+- **Templates HTML** responsivos com Jinja2
+- **Emails transacionais** (reset de senha, verificação)
+- **Fallback texto plano** para compatibilidade
+- **Configuração segura** via variáveis de ambiente
+- **Logs detalhados** para debugging
 
 ### Arquitetura e Padrões
 - **Arquitetura em camadas** (Routes → Services → Models)
@@ -224,6 +234,22 @@ curl -X GET "http://localhost:8000/api/v1/users/" \
   -H "Authorization: Bearer <seu-token>"
 ```
 
+### Reset de Senha
+```bash
+# Solicitar reset de senha
+curl -X POST "http://localhost:8000/api/v1/auth/password-reset" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com"}'
+
+# Confirmar reset com token recebido por email
+curl -X POST "http://localhost:8000/api/v1/auth/password-reset/confirm" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "token-recebido-por-email",
+    "new_password": "NovaSenha123!"
+  }'
+```
+
 ## Sistema de Permissões
 
 ### Estrutura de Permissões
@@ -280,9 +306,48 @@ POSTGRES_PASSWORD=senha-segura
 # Redis
 REDIS_URL=redis://localhost:6379/0
 
+# Email - Gmail SMTP
+SMTP_USERNAME=seu-email@gmail.com
+SMTP_PASSWORD=senha-de-app-do-gmail
+EMAIL_FROM=noreply@seuapp.com
+EMAIL_FROM_NAME=FastAPI Base
+FRONTEND_URL=http://localhost:3000
+
 # CORS
 CORS_ORIGINS=https://meuapp.com,https://admin.meuapp.com
 ```
+
+## Configuração de Email (Gmail)
+
+### 1. Configurar Gmail
+1. **Ativar autenticação de 2 fatores** na sua conta Google
+2. **Gerar senha de app:**
+   - Acesse [Google Account](https://myaccount.google.com)
+   - Segurança → Senhas de app
+   - Selecione "Email" → Gerar senha
+   - Use esta senha no `SMTP_PASSWORD`
+
+### 2. Configurar Variáveis
+```env
+SMTP_USERNAME=seu-email@gmail.com
+SMTP_PASSWORD=sua-senha-de-app-gerada  # NÃO use sua senha normal!
+EMAIL_FROM=noreply@seuapp.com          # Email que aparece como remetente
+EMAIL_FROM_NAME=Seu App                # Nome que aparece como remetente
+FRONTEND_URL=https://seuapp.com        # URL do frontend para links
+```
+
+### 3. Testar Email
+```bash
+# Testar reset de senha
+curl -X POST "http://localhost:8000/api/v1/auth/password-reset" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "seu-email@teste.com"}'
+```
+
+### 📧 **Templates de Email**
+Os templates HTML estão em `app/templates/email/`:
+- **password_reset.html** - Email de reset de senha
+- Personalize conforme sua marca/design
 
 ## Deploy com Docker
 
@@ -429,12 +494,13 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para detalhes.
 - [ ] Upload de arquivos com S3
 - [ ] Sistema de auditoria completo
 - [ ] Integração com OAuth2 (Google, GitHub)
-- [ ] Sistema de templates de email
 - [ ] Cache avançado com Redis
 - [ ] Webhook system
 - [ ] API versioning
 - [ ] Rate limiting por usuário
 - [ ] Sistema de quotas
+- [ ] Verificação de email por token
+- [ ] Templates de email avançados
 
 ### Melhorias Planejadas
 - [ ] Testes de performance

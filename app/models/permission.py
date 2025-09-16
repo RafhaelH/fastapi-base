@@ -38,6 +38,6 @@ class Permission(Base):
         back_populates="permissions",
         lazy="selectin"
     )
-    
+
     def __repr__(self) -> str:
         return f"<Permission(name='{self.name}', resource='{self.resource}', action='{self.action}')>"

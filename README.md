@@ -10,7 +10,7 @@
 
 **Sistema FastAPI robusto com autenticação JWT e controle de acesso baseado em funções (RBAC)**
 
-[📚 Documentação](#-documentação) • [🚀 Quick Start](#-quick-start) • [🔧 Configuração](#-configuração) • [📖 API Reference](#-api-reference)
+[📚 Documentação](#documentação) • [🚀 Quick Start](#quick-start) • [🔧 Configuração](#configuração) • [📖 API Reference](#api-reference)
 
 </div>
 
@@ -18,17 +18,17 @@
 
 ## 📋 Índice
 
-- [Sobre o Projeto](#-sobre-o-projeto)
-- [Funcionalidades](#-funcionalidades)
-- [Arquitetura](#️-arquitetura)
-- [Quick Start](#-quick-start)
-- [Configuração](#-configuração)
-- [API Reference](#-api-reference)
-- [Estrutura do Projeto](#️-estrutura-do-projeto)
-- [Testes](#-testes)
-- [Documentação](#-documentação)
-- [Contribuição](#-contribuição)
-- [Licença](#-licença)
+- [Sobre o Projeto](#sobre-o-projeto)
+- [Funcionalidades](#funcionalidades)
+- [Arquitetura](#️arquitetura)
+- [Quick Start](#quick-start)
+- [Configuração](#configuração)
+- [API Reference](#api-reference)
+- [Estrutura do Projeto](#️estrutura-do-projeto)
+- [Testes](#testes)
+- [Documentação](#documentação)
+- [Contribuição](#contribuição)
+- [Licença](#licença)
 
 ---
 

@@ -26,7 +26,7 @@ async def update_current_user_profile(
     session: AsyncSession = Depends(get_session)
 ) -> UserOut:
     """Atualiza o perfil do usuário autenticado."""
-    updated_user = await UserService.update_profile(
+    updated_user = await UserService.update_user(
         user_id=current_user.id,
         user_data=user_data,
         session=session

@@ -1,6 +1,5 @@
 """Dependências para autenticação e autorização."""
-from functools import wraps
-from typing import Callable, Optional
+from typing import Optional
 
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer

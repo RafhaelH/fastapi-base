@@ -1,0 +1,117 @@
+version: "3.9"
+
+services:
+  # API Principal
+  api:
+    build: 
+      context: .
+      target: builder
+    container_name: fastapi_base_api
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Aguardando banco de dados...' &&
+        sleep 5 &&
+        echo 'Executando migrações...' &&
+        alembic upgrade head &&
+        echo 'Criando permissões padrão...' &&
+        python -c 'import asyncio; from app.scripts.init_data import init_default_data; asyncio.run(init_default_data())' &&
+        echo 'Iniciando servidor...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level info
+      "
+    volumes:
+      - .:/app
+    networks:
+      - fastapi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Banco de Dados PostgreSQL
+  db:
+    image: postgres:16-alpine
+    container_name: fastapi_base_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fastapi_base}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - fastapi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-fastapi_base}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis para Cache e Celery
+  redis:
+    image: redis:7-alpine
+    container_name: fastapi_base_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      - fastapi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Worker Celery para Tarefas Assíncronas
+  worker:
+    build: 
+      context: .
+      target: builder
+    container_name: fastapi_base_worker
+    env_file: .env
+    depends_on:
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
+    volumes:
+      - .:/app
+    networks:
+      - fastapi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.tasks.celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  db_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  fastapi_network:
+    driver: bridge
+    name: fastapi_base_network

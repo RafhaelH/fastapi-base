@@ -1,0 +1,1 @@
+"""Módulo de testes da aplicação."""
